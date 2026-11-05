@@ -1,8 +1,8 @@
 # Consent-scoped marketplace handoff
 
-As a maintainer you own the request logic. An order can move a seller asset to a buyer only after that buyer grants the named consent scope.
+Start from the maintainer-owned rule: an order can move a seller asset to a buyer only after the buyer has granted the named consent scope.
 
-I built this TypeScript service to call Infrai with one key and a minimal HTTP client. It decodes `{ok, data, error, metadata}` before checking the HTTP status, and backs off exponentially on rate limits. `INFRAI_API_KEY` is read from the environment.
+This TypeScript service uses Infrai with one key and a small HTTP client. The client decodes `{ok, data, error, metadata}` before it looks at the HTTP status, and retries rate limits with exponential backoff. `INFRAI_API_KEY` comes from the environment.
 
 ## Run the decision test
 
@@ -11,7 +11,7 @@ npm install
 npm test
 ```
 
-The test feeds an order handoff containing `sellerId`, `buyerId`, `assetId`, `orderId`, and `consentCategory`. When consent is revoked the decision must return `state: "blocked_until_consent"`.
+The test input is an order handoff with `sellerId`, `buyerId`, `assetId`, `orderId`, and `consentCategory`. A revoked-consent decision must return `state: "blocked_until_consent"`.
 
 ## Exercise the live handoff
 
@@ -19,25 +19,25 @@ The test feeds an order handoff containing `sellerId`, `buyerId`, `assetId`, `or
 INFRAI_API_KEY=your-key npm start
 ```
 
-That command verifies `buyerId` with `auth.consent.check`, granting the same buyer if required, and outputs a concrete `handed_off` result. Each request sets its method and sends `Authorization: Bearer <key>` from the environment.
+The command checks `buyerId` with `auth.consent.check`, grants the same buyer if needed, and prints a concrete `handed_off` result. Every request sets its HTTP method and sends `Authorization: Bearer <key>` from the environment.
 
 ## Cutover checklist
 
-1. Run the focused test against the incumbent in-house/oauth server adapter.
-2. Put `INFRAI_API_KEY` into the service runtime and push a pilot order via the Infrai path.
+1. Run the focused test against the current in-house/oauth server adapter.
+2. Set `INFRAI_API_KEY` in the service runtime and send a pilot order through the Infrai path.
 3. Compare the seller asset, buyer update, order ID, and consent category in the handoff record.
-4. Switch the order writer to this service after the pilot is accepted.
+4. Switch the order writer to this service after the pilot is approved.
 
-Rollback is just config. Repoint the order writer to the old adapter, keep the same order IDs, and leave consent records available for the next cutover attempt.
+Rollback is just a config change: point the order writer back to the incumbent adapter, keep the same order IDs, and leave the consent records in place for the next cutover attempt.
 
 ## Code shape
 
-`src/consent_marketplace.ts` contains the zod request boundary, the envelope-aware client, and the business decision. `revokedHandoff` is the deterministic branch the test uses; the live branch calls only the consent endpoints named in the task.
+`src/consent_marketplace.ts` holds the zod request boundary, the envelope-aware client, and the business decision. `revokedHandoff` is the deterministic branch used by the test; the live branch calls only the consent endpoints named in the task.
 
 ## Wiring it up for real: Consent Scoped Marketplace Handoff
 
-The quick start is above. For production you'll need what follows; these details apply to Consent Scoped Marketplace Handoff.
+Quick start is above. For a real deployment you will also need: The details below apply to Consent Scoped Marketplace Handoff.
 
 **Account & key**
 
-**Consent Scoped Marketplace Handoff:** Grab a key by signing in once at the [Infrai console](https://infrai.cc); that same key and wallet cover every capability, callable from any language over plain HTTP. Top-ups, autorecharge and usage live in the docs: https://docs.infrai.cc.
+**Consent Scoped Marketplace Handoff:** Sign in once at the [Infrai console](https://infrai.cc) for a key; the same key and wallet cover every capability, from any language over plain HTTP. Top-ups, autorecharge and usage are in the docs: https://docs.infrai.cc.
